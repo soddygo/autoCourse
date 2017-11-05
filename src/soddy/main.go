@@ -31,5 +31,5 @@ func main() {
 	}
 
 
-	course.WriteExcel(filePath2)
+	course.WriteExcel(filePath2,labArray,termInfo.GetLab())
 }

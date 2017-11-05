@@ -199,7 +199,12 @@ func (self *Course) SortClass(term *SchoolTerm) [][]*Lab {
 		var dayLabs = make([]*Lab, 0)
 		for _, lab := range self.lab {
 			//遍历
-			for _, v := range term.sClassMapLab {
+			for k, v := range term.sClassMapLab {
+				//同一天，班级不能上多个实验课，只能上一个实验课
+				if  hasContainClass(dayLabs,k){
+					//当天已经上过实验课，跳过
+					continue
+				}
 				//遍历这个班级的实验课，是否已被安排
 				flag, labObj := self.hasContainLab(v, lab, false)
 				if !flag {
@@ -224,6 +229,19 @@ func (self *Course) SortClass(term *SchoolTerm) [][]*Lab {
 		termCount++
 	}
 	return termLabs
+}
+//判断班级是否存在了
+func hasContainClass(labArray []*Lab,sClass string)bool  {
+	flag := false
+
+	for _,lab :=range labArray{
+		if lab.sClass == sClass{
+			flag = true
+			break
+		}
+	}
+
+	return flag
 }
 
 //是否包含实验课判断，company是连队信息
