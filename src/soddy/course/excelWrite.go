@@ -32,12 +32,12 @@ func WriteExcel(filePath string, termLabs [][]*Lab, labs []string) {
 	var letter2 rune = 'A'
 	var letterInt2 = int(letter2)
 	for i, labAry := range termLabs {
-		fmt.Println("show:",string(rune(letterInt2))+strconv.Itoa(i+2))
+		//fmt.Println("show:",string(rune(letterInt2))+strconv.Itoa(i+2))
 		xlsx.SetCellValue(sheetName, string(rune(letterInt2))+strconv.Itoa(i+2), i+1)
 		for _, lab := range labAry {
 			var index = getIndex(labs, lab.GetLab())
 
-			fmt.Println("column:", string(rune(letterInt2+index+1))+strconv.Itoa(i+2))
+			//fmt.Println("column:", string(rune(letterInt2+index+1))+strconv.Itoa(i+2))
 
 			xlsx.SetCellValue(sheetName, string(rune(letterInt2+index+1))+strconv.Itoa(i+2), lab.sClass)
 		}

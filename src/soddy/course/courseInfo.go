@@ -200,28 +200,32 @@ func (self *Course) SortClass(term *SchoolTerm) [][]*Lab {
 		for _, lab := range self.lab {
 			//遍历
 			for k, v := range term.sClassMapLab {
-				//同一天，班级不能上多个实验课，只能上一个实验课
-				if  hasContainClass(dayLabs,k){
-					//当天已经上过实验课，跳过
-					continue
-				}
-				//遍历这个班级的实验课，是否已被安排
-				flag, labObj := self.hasContainLab(v, lab, false)
-				if !flag {
-					//dayLabs[i] = labObj
-					dayLabs = append(dayLabs, labObj)
-					//修改flag 标记
-					labObj.flag = true
-					labCount++
-					break
+				//判断班级，上学期实验课是否上够了，且连续3天，最多只上2天实验课
+				termFlag := filterWeekAndTerm(termLabs, k)
+				fmt.Println("termCount:",termCount,"[termFlag:]",termFlag)
+				if termFlag {
+					//同一天，班级不能上多个实验课，只能上一个实验课
+					if hasContainClass(dayLabs, k) {
+						//当天已经上过实验课，跳过
+						continue
+					}
+					//遍历这个班级的实验课，是否已被安排
+					flag, labObj := self.hasContainLab(v, lab, false)
+					if !flag {
+						//dayLabs[i] = labObj
+						dayLabs = append(dayLabs, labObj)
+						//修改flag 标记
+						labObj.flag = true
+						labCount++
+						break
+					}
 				}
 			}
-
 		}
 
 		//判断2个学期的课程，是否安排完成了
 		//所有班级课程已经安排完成，无命中课程，跳出
-		if labCount == 0 {
+		if labCount == 0 && len(termLabs) > 18 {
 			break
 		}
 		//一天的实验课安排满，跳出12个lab循环，重新下一天的课程
@@ -230,12 +234,50 @@ func (self *Course) SortClass(term *SchoolTerm) [][]*Lab {
 	}
 	return termLabs
 }
+
+//一个班级，一周最多2次实验课，一学期只上6次实验课
+func filterWeekAndTerm(termArray [][]*Lab, sClass string) bool {
+	flag := true
+	count := 0
+	//往前推2天，如果此班级都出现了，则不再添加次班级,且时间不能是第二学期的第一天，第二天
+	if len(termArray) >= 2 && len(termArray) != 18 && len(termArray) != 19 {
+		for _, labArray := range termArray[len(termArray)-2:] {
+			for _, lab := range labArray {
+				if sClass == lab.sClass {
+					count++
+				}
+			}
+		}
+		if count >= 2 {
+			flag = false
+		}
+
+		//判断第一学期，是否上够6个实验课，前1-18天上够，且天数还在18天之内，则此班级就不上实验课了
+		termCount := 0
+		if len(termArray) <=17 {
+			for _, labArray := range termArray[0:] {
+				for _, lab := range labArray {
+					if sClass == lab.sClass {
+						termCount++
+					}
+				}
+			}
+			if termCount >= 6  {
+				flag = false
+			}
+		}
+
+	}
+
+	return flag
+}
+
 //判断班级是否存在了
-func hasContainClass(labArray []*Lab,sClass string)bool  {
+func hasContainClass(labArray []*Lab, sClass string) bool {
 	flag := false
 
-	for _,lab :=range labArray{
-		if lab.sClass == sClass{
+	for _, lab := range labArray {
+		if lab.sClass == sClass {
 			flag = true
 			break
 		}
