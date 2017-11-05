@@ -31,6 +31,19 @@ type Lab struct {
 	flag       bool
 }
 
+func (self *Lab) GetSclass() string {
+	return self.sClass
+}
+func (self *Lab) GetCompanyMap() map[int]bool {
+	return self.companyMap
+}
+func (self *Lab) GetLab() string {
+	return self.lab
+}
+func (self *Lab) GetFlag() bool {
+	return self.flag
+}
+
 //计算实验课时间，周一到周五
 func WorkDay(startDate string, endDate string) (dayArray []time.Time) {
 	startTime, _ := time.Parse("2016-01-02", startDate)
@@ -56,7 +69,7 @@ func WorkDay(startDate string, endDate string) (dayArray []time.Time) {
 }
 
 //初始化
-func (self *Course) init(teacher []string, studentClass []string, lab []string, startDate []string, endDate []string) {
+func (self *Course) Init(teacher []string, studentClass []string, lab []string, startDate []string, endDate []string) {
 	self.teacher = teacher
 	self.studentClass = studentClass
 	self.lab = lab
@@ -66,7 +79,8 @@ func (self *Course) init(teacher []string, studentClass []string, lab []string, 
 
 //组合班级和实验课的集合,班级作为key，实验课lab作为values
 func (self *Course) AllCourseAndClass() map[string][]string {
-	var labMap map[string][]string
+	//var labMap map[string][]string
+	var labMap = make(map[string][]string)
 
 	for _, student := range self.studentClass {
 		labslice := make([]string, 12)
@@ -84,15 +98,16 @@ func (self *Course) AllCourseAndClass() map[string][]string {
 func (self *Course) RandomCourse() *SchoolTerm {
 	//每个班级，随机抽6个实验课
 	//1 先随机抽6个实验课
-	randLabs := [6]string{}
+	randLabs := make([]string, 6)
 	lab1Count := 0
 	if len(self.lab) >= 12 {
 		for {
-			r := rand.Intn(12)
+			r := rand.Intn(len(self.lab) - 1)
 			curLab := self.lab[r]
 			//判断数组里是否包含了此实验课，不包含则加入
 			containFlag := false
 			for _, lab := range randLabs {
+
 				if lab == curLab {
 					containFlag = true
 					break
@@ -104,14 +119,14 @@ func (self *Course) RandomCourse() *SchoolTerm {
 				lab1Count++
 			}
 			//当满足随机实验课够6个的时候，就跳出循环
-			if len(randLabs) >= 6 {
+			if lab1Count >= 6 {
 				break
 			}
 		}
 	}
 
 	//2 剩下的实验课，放入另外的数组里,用于下学期使用
-	randLabs2 := [6]string{}
+	randLabs2 := make([]string, 6)
 	lab2Count := 0
 	for _, lab2 := range self.lab {
 		containFlag := false
@@ -142,7 +157,7 @@ func (self *Course) RandomCourse() *SchoolTerm {
 			lab.flag = false
 			labTerm[j] = lab
 		}
-		studentMap[sClass] = labTerm
+		//studentMap[sClass] = labTerm
 
 		//下半学期的课程
 		var labTerm2 = make([]*Lab, 6)
@@ -155,7 +170,10 @@ func (self *Course) RandomCourse() *SchoolTerm {
 			lab.flag = false
 			labTerm2[j] = lab
 		}
-		studentMap[sClass] = labTerm2
+		allTerm := make([]*Lab, len(labTerm)+len(labTerm2))
+		copy(allTerm, labTerm)
+		copy(allTerm[len(labTerm):], labTerm2)
+		studentMap[sClass] = allTerm
 	}
 
 	//上学期对象
@@ -168,49 +186,71 @@ func (self *Course) RandomCourse() *SchoolTerm {
 
 //排课，按照天为单位，顺序列出
 //一天10-12个实验课，一学期实验课时间是6周，一周是3天实验课时间
-func (self *Course) sortClass(term *SchoolTerm) {
+func (self *Course) SortClass(term *SchoolTerm) [][]*Lab {
+
 	//先按照1天12个实验课排，一个班级，一周只上一天
-	//先按照一个班级一个实验来排
-	var termLabs = make([][]*Lab, 18)
-	var dayLabs = make([]*Lab, 12)
+	//先按照一个班级一个实验来排，2个学期共36天实验课
+	var termLabs = make([][]*Lab, 0)
+	termCount := 0
 	//直到所有的课程和班级安排完，跳出
 	for {
 
+		var labCount = 0
+		var dayLabs = make([]*Lab, 0)
 		for _, lab := range self.lab {
-
 			//遍历
-			for k, v := range term.sClassMapLab {
-				//遍历l这个班级的实验课，是否已被安排
-
+			for _, v := range term.sClassMapLab {
+				//遍历这个班级的实验课，是否已被安排
+				flag, labObj := self.hasContainLab(v, lab, false)
+				if !flag {
+					//dayLabs[i] = labObj
+					dayLabs = append(dayLabs, labObj)
+					//修改flag 标记
+					labObj.flag = true
+					labCount++
+					break
+				}
 			}
 
 		}
 
+		//判断2个学期的课程，是否安排完成了
+		//所有班级课程已经安排完成，无命中课程，跳出
+		if labCount == 0 {
+			break
+		}
+		//一天的实验课安排满，跳出12个lab循环，重新下一天的课程
+		termLabs = append(termLabs, dayLabs)
+		termCount++
 	}
-
+	return termLabs
 }
 
 //是否包含实验课判断，company是连队信息
-func hasContainLab(labArray []*Lab, labStr string, complanyFlag bool, company int) bool {
-	var flag = false
-
+func (self *Course) hasContainLab(labArray []*Lab, labStr string, complanyFlag bool, company ...int) (bool, *Lab) {
+	flag := false
+	labObj := &Lab{}
 	if !complanyFlag {
 		for _, lab := range labArray {
-			if lab.lab == labStr && lab.flag == true {
-				flag = true
+			if lab.lab == labStr {
+				if lab.flag == true {
+					flag = true
+				}
+				labObj = lab
 				break
 			}
-
 		}
 	} else {
 		//需要对连队进行判断
 		for _, lab := range labArray {
-			if lab.lab == labStr && lab.companyMap[company] == true {
-				flag = true
+			if lab.lab == labStr {
+				if lab.companyMap[company[0]] == true {
+					flag = true
+				}
+				labObj = lab
 				break
 			}
 		}
 	}
-
-	return flag
+	return flag, labObj
 }
