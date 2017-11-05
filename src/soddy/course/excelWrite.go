@@ -47,6 +47,7 @@ func WriteExcel(filePath string, termLabs [][]*Lab, labs []string) {
 	xlsx.SetActiveSheet(0)
 	// Save xlsx file by the given path.
 	//err := xlsx.SaveAs("./Workbook.xlsx")
+	fmt.Println("filePath：",filePath)
 	err := xlsx.SaveAs(filePath)
 	if err != nil {
 		fmt.Println(err)
